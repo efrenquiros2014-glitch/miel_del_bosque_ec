@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>Miel del Bosque</title>
+
+  <!-- PWA: agregar a pantalla de inicio iPhone -->
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="Miel del Bosque"/>
+  <meta name="theme-color" content="#2D5016"/>
+
+  <!-- Ícono para iPhone (emoji SVG inline como data URI) -->
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%232D5016'/%3E%3Ctext y='.9em' font-size='72' x='12'%3E%F0%9F%8D%AF%3C/text%3E%3C/svg%3E"/>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+    :root{
+      --miel:#C47B1A;--miel2:#E8A838;--panal:#FDF3DC;
+      --tierra:#4A2E10;--bosque:#2D5016;--bosque2:#4A7A28;
+      --cream:#FFFBF2;--shadow:rgba(74,46,16,0.15);--radius:16px;
+      --obs:#7B4FA6;--obs-bg:#F3EBF9;
+    }
+    html,body{height:100%;overscroll-behavior:none}
+    body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--tierra);overflow-x:hidden}
+
+    /* ── App shell ── */
+    #app{max-width:430px;margin:0 auto;min-height:100vh;min-height:100dvh;background:var(--cream);display:flex;flex-direction:column}
+
+    /* ── Header ── */
+    .header{
+      background:linear-gradient(160deg,var(--bosque) 0%,var(--bosque2) 100%);
+      padding:env(safe-area-inset-top,44px) 24px 20px;
+      padding-top:max(env(safe-area-inset-top,0px),44px);
+      position:relative;overflow:hidden;flex-shrink:0
+    }
+    .header::before{content:'🍯';position:absolute;right:-10px;top:-10px;font-size:120px;opacity:.08;pointer-events:none}
+    .header-brand{font-family:'Playfair Display',serif;color:var(--miel2);font-size:11px;letter-spacing:3px;text-transform:uppercase;margin-bottom:2px}
+    .header-title{font-family:'Playfair Display',serif;color:#fff;font-size:24px;font-weight:700;line-height:1.2;margin-bottom:14px}
+    .header-stats{display:flex;gap:8px}
+    .hstat{flex:1;background:rgba(255,255,255,.13);border-radius:12px;padding:10px}
+    .hstat-label{font-size:9px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.8px;margin-bottom:3px}
+    .hstat-val{font-family:'Playfair Display',serif;font-size:17px;font-weight:700;color:#fff;line-height:1}
+    .hstat-val.obs{color:#D8B4FE}
+
+    /* ── Nav ── */
+    .nav{
+      display:flex;background:#fff;border-bottom:2px solid var(--panal);
+      position:sticky;top:0;z-index:10;box-shadow:0 2px 12px var(--shadow);flex-shrink:0
+    }
+    .nav-btn{flex:1;padding:12px 4px;border:none;background:transparent;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:500;color:#999;display:flex;flex-direction:column;align-items:center;gap:2px;transition:color .2s;-webkit-appearance:none}
+    .nav-btn.active{color:var(--bosque)}
+    .nav-btn.active .ndot{background:var(--miel)}
+    .ndot{width:4px;height:4px;border-radius:50%;background:transparent;transition:background .2s}
+    .nav-icon{font-size:19px}
+
+    /* ── Content ── */
+    .content{flex:1;padding:20px 16px;padding-bottom:max(90px,calc(70px + env(safe-area-inset-bottom)));overflow-y:auto}
+    .tab-pane{display:none}
+    .tab-pane.active{display:block}
+
+    /* ── Cards ── */
+    .card{background:#fff;border-radius:var(--radius);box-shadow:0 2px 12px var(--shadow);margin-bottom:16px;overflow:hidden}
+    .card-header{padding:14px 18px 12px;border-bottom:1px solid var(--panal);display:flex;align-items:center;justify-content:space-between}
+    .card-title{font-family:'Playfair Display',serif;font-size:16px;font-weight:600;color:var(--tierra)}
+    .card-body{padding:16px 18px}
+
+    /* ── Stock ── */
+    .sgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+    .sitem{background:linear-gradient(135deg,var(--panal),#FFF8E8);border-radius:12px;padding:16px;border:1.5px solid rgba(196,123,26,.2);text-align:center}
+    .slabel{font-size:11px;font-weight:600;color:var(--miel);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+    .snum{font-family:'Playfair Display',serif;font-size:36px;font-weight:700;color:var(--tierra);line-height:1}
+    .snum.low{color:#C0392B}
+    .sunit{font-size:11px;color:#999;margin-top:4px}
+    .sval{text-align:center;padding:12px;background:linear-gradient(135deg,var(--bosque),var(--bosque2));border-radius:12px;color:#fff}
+    .sval-label{font-size:11px;opacity:.8;letter-spacing:1px;text-transform:uppercase}
+    .sval-num{font-family:'Playfair Display',serif;font-size:26px;font-weight:700}
+
+    .adj-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+    .adj-label{font-size:13px;font-weight:500;flex:1}
+    .adj-btns{display:flex;gap:6px;align-items:center}
+    .adj-btn{width:34px;height:34px;border-radius:8px;border:1.5px solid var(--miel);background:transparent;color:var(--miel);font-size:20px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;-webkit-appearance:none}
+    .adj-btn:active{background:var(--miel);color:#fff;transform:scale(.93)}
+    .adj-count{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;min-width:36px;text-align:center}
+
+    /* ── Form ── */
+    .fg{margin-bottom:14px}
+    .fl{font-size:12px;font-weight:600;color:var(--miel);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;display:block}
+    .fi{width:100%;padding:12px 14px;border-radius:10px;border:1.5px solid #E8DDD0;font-family:'DM Sans',sans-serif;font-size:16px;color:var(--tierra);background:#fff;outline:none;-webkit-appearance:none;transition:border-color .2s}
+    .fi:focus{border-color:var(--miel)}
+    .fi::placeholder{color:#CCC}
+    input[type=date].fi{color:var(--tierra)}
+
+    .pills{display:flex;gap:8px;flex-wrap:wrap}
+    .pill{flex:1;min-width:70px;padding:11px 6px;border-radius:10px;border:1.5px solid #E8DDD0;background:#fff;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:#999;cursor:pointer;text-align:center;transition:all .2s;-webkit-appearance:none}
+    .pill.sel{border-color:var(--miel);background:var(--panal);color:var(--tierra);font-weight:600}
+    .pill.sel.opill{border-color:var(--obs);background:var(--obs-bg);color:var(--obs)}
+
+    .preview{border-radius:12px;padding:12px 14px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;background:var(--panal)}
+    .preview.oprev{background:var(--obs-bg)}
+    .prev-label{font-size:13px;color:#888}
+    .prev-val{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--miel)}
+    .prev-val.oprev-val{color:var(--obs);font-size:18px}
+
+    .btn{width:100%;padding:15px;border-radius:12px;background:linear-gradient(135deg,var(--miel),#D4891F);color:#fff;border:none;font-family:'DM Sans',sans-serif;font-size:16px;font-weight:600;cursor:pointer;box-shadow:0 4px 14px rgba(196,123,26,.4);transition:all .15s;-webkit-appearance:none}
+    .btn:active{transform:scale(.98)}
+    .btn:disabled{opacity:.4;cursor:not-allowed}
+    .btn.obtn{background:linear-gradient(135deg,var(--obs),#9B6FC6);box-shadow:0 4px 14px rgba(123,79,166,.35)}
+
+    /* ── Toast ── */
+    .toast{position:fixed;bottom:calc(80px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%) translateY(20px);background:var(--bosque);color:#fff;padding:12px 20px;border-radius:40px;font-size:14px;font-weight:500;opacity:0;transition:all .3s;z-index:100;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.2);pointer-events:none}
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+    /* ── Historial ── */
+    .vi{padding:14px 0;border-bottom:1px solid #F2EAE0;display:flex;align-items:center;gap:12px}
+    .vi:last-child{border-bottom:none}
+    .vav{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--panal),#FFEDB5);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+    .vav.oav{background:linear-gradient(135deg,var(--obs-bg),#E9D5FF)}
+    .vinfo{flex:1;min-width:0}
+    .vcli{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .vmeta{font-size:12px;color:#999;margin-top:2px}
+    .vbadge{background:var(--panal);color:var(--miel);font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;white-space:nowrap}
+    .vbadge.promo{background:#E8F4DC;color:var(--bosque)}
+    .vbadge.obs{background:var(--obs-bg);color:var(--obs)}
+    .vtotal{font-family:'Playfair Display',serif;font-size:15px;font-weight:700;color:var(--tierra)}
+    .vtotal.obs{color:var(--obs);font-size:13px}
+
+    /* ── Filtros ── */
+    .filters{display:flex;gap:8px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+    .filters::-webkit-scrollbar{display:none}
+    .chip{padding:7px 14px;border-radius:20px;border:1.5px solid #E8DDD0;background:#fff;font-size:13px;font-weight:500;color:#999;cursor:pointer;white-space:nowrap;transition:all .2s;-webkit-appearance:none}
+    .chip.act{border-color:var(--miel);background:var(--panal);color:var(--tierra)}
+    .chip.act.ochip{border-color:var(--obs);background:var(--obs-bg);color:var(--obs)}
+
+    /* ── Resumen ── */
+    .rgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+    .rtile{background:var(--panal);border-radius:12px;padding:14px;text-align:center}
+    .rtile.accent{background:linear-gradient(135deg,var(--bosque),var(--bosque2))}
+    .rtile.accent .rval{color:#fff}
+    .rtile.accent .rsub{color:rgba(255,255,255,.7)}
+    .rtile.otile{background:var(--obs-bg)}
+    .rtile.otile .rval{color:var(--obs)}
+    .rtile.otile .rsub{color:#9B6FC6}
+    .rtile.full{grid-column:1/-1}
+    .rval{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--tierra)}
+    .rsub{font-size:11px;color:#999;margin-top:3px;text-transform:uppercase;letter-spacing:.8px}
+    .rsep{font-size:11px;font-weight:600;color:#BBB;text-transform:uppercase;letter-spacing:1.5px;margin:16px 0 10px}
+
+    /* ── Misc ── */
+    .empty{text-align:center;padding:40px 20px;color:#BBB}
+    .empty-icon{font-size:48px;margin-bottom:12px}
+    .alert-stock{background:#FFF3CD;border:1.5px solid #FFD966;border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;margin-bottom:16px;font-size:13px;font-weight:500;color:#856404}
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-brand">Apiario del Bosque</div>
+    <div class="header-title">Miel del Bosque</div>
+    <div class="header-stats">
+      <div class="hstat">
+        <div class="hstat-label">Este mes</div>
+        <div class="hstat-val" id="h-mes">$0.00</div>
+      </div>
+      <div class="hstat">
+        <div class="hstat-label">Acumulado</div>
+        <div class="hstat-val" id="h-total">$0.00</div>
+      </div>
+      <div class="hstat">
+        <div class="hstat-label">Obsequios</div>
+        <div class="hstat-val obs" id="h-obs">0 frascos</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NAV -->
+  <nav class="nav">
+    <button class="nav-btn active" data-tab="stock">
+      <span class="nav-icon">🍯</span><span>Stock</span><div class="ndot"></div>
+    </button>
+    <button class="nav-btn" data-tab="vender">
+      <span class="nav-icon">✏️</span><span>Vender</span><div class="ndot"></div>
+    </button>
+    <button class="nav-btn" data-tab="ventas">
+      <span class="nav-icon">📋</span><span>Ventas</span><div class="ndot"></div>
+    </button>
+    <button class="nav-btn" data-tab="resumen">
+      <span class="nav-icon">📊</span><span>Resumen</span><div class="ndot"></div>
+    </button>
+  </nav>
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <!-- ══ STOCK ══ -->
+    <div class="tab-pane active" id="tab-stock">
+      <div class="alert-stock" id="alert-stock" style="display:none">⚠️ Stock bajo en uno o más formatos</div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Stock Actual</span></div>
+        <div class="card-body">
+          <div class="sgrid">
+            <div class="sitem">
+              <div class="slabel">Frasco 0.5 kg</div>
+              <div class="snum" id="snum-medio">0</div>
+              <div class="sunit">unidades</div>
+            </div>
+            <div class="sitem">
+              <div class="slabel">Frasco 1 kg</div>
+              <div class="snum" id="snum-uno">0</div>
+              <div class="sunit">unidades</div>
+            </div>
+          </div>
+          <div class="sval">
+            <div class="sval-label">Valor aprox. en stock</div>
+            <div class="sval-num" id="sval-total">$0.00</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Ajustar Stock</span></div>
+        <div class="card-body">
+          <div class="adj-row">
+            <span class="adj-label">Frascos 0.5 kg</span>
+            <div class="adj-btns">
+              <button class="adj-btn" onclick="adj('medio',-1)">−</button>
+              <span class="adj-count" id="adj-medio">0</span>
+              <button class="adj-btn" onclick="adj('medio',+1)">+</button>
+            </div>
+          </div>
+          <div class="adj-row">
+            <span class="adj-label">Frascos 1 kg</span>
+            <div class="adj-btns">
+              <button class="adj-btn" onclick="adj('uno',-1)">−</button>
+              <span class="adj-count" id="adj-uno">0</span>
+              <button class="adj-btn" onclick="adj('uno',+1)">+</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ VENDER ══ -->
+    <div class="tab-pane" id="tab-vender">
+      <div class="card">
+        <div class="card-header"><span class="card-title">Registrar Entrega</span></div>
+        <div class="card-body">
+          <div class="fg">
+            <label class="fl">Fecha</label>
+            <input type="date" class="fi" id="f-fecha"/>
+          </div>
+          <div class="fg">
+            <label class="fl" id="f-cli-label">Nombre o Código de Cliente</label>
+            <input type="text" class="fi" id="f-cliente" placeholder="Ej: Juan Pérez o CLI-042"/>
+          </div>
+          <div class="fg">
+            <label class="fl">Frasco</label>
+            <div class="pills" id="pills-cantidad">
+              <button class="pill" data-val="0.5" onclick="selCant(this)">½ kg — Pequeño</button>
+              <button class="pill sel" data-val="1"   onclick="selCant(this)">1 kg — Grande</button>
+            </div>
+          </div>
+          <div class="fg">
+            <label class="fl">Tipo</label>
+            <div class="pills" id="pills-precio">
+              <button class="pill sel" data-val="normal"   onclick="selPrecio(this)">💰 Normal</button>
+              <button class="pill"     data-val="promo"    onclick="selPrecio(this)">🏷️ Promoción</button>
+              <button class="pill"     data-val="obsequio" onclick="selPrecio(this)">🎁 Obsequio</button>
+            </div>
+          </div>
+          <div class="preview" id="f-preview">
+            <span class="prev-label" id="prev-label">Total a cobrar</span>
+            <span class="prev-val"   id="prev-val">$15.00</span>
+          </div>
+          <button class="btn" id="btn-registrar" onclick="registrar()">Registrar Venta</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ VENTAS ══ -->
+    <div class="tab-pane" id="tab-ventas">
+      <div class="filters" id="filtros">
+        <button class="chip act"  data-f="todas"    onclick="setFiltro(this)">Todas</button>
+        <button class="chip"      data-f="0.5"      onclick="setFiltro(this)">½ kg</button>
+        <button class="chip"      data-f="1"        onclick="setFiltro(this)">1 kg</button>
+        <button class="chip"      data-f="promo"    onclick="setFiltro(this)">Promo</button>
+        <button class="chip"      data-f="obsequio" onclick="setFiltro(this)">🎁 Obsequios</button>
+      </div>
+      <div class="card">
+        <div class="card-body" style="padding:4px 18px" id="lista-ventas">
+          <div class="empty"><div class="empty-icon">📋</div><div>No hay registros todavía</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ RESUMEN ══ -->
+    <div class="tab-pane" id="tab-resumen">
+      <div class="card">
+        <div class="card-header"><span class="card-title">Ingresos</span></div>
+        <div class="card-body">
+          <div class="rgrid">
+            <div class="rtile accent full">
+              <div class="rval" id="r-total">$0.00</div>
+              <div class="rsub">Total acumulado (USD)</div>
+            </div>
+            <div class="rtile"><div class="rval" id="r-mes">$0.00</div><div class="rsub">Este mes</div></div>
+            <div class="rtile"><div class="rval" id="r-ticket">$0.00</div><div class="rsub">Ticket promedio</div></div>
+            <div class="rtile"><div class="rval" id="r-nvtas">0</div><div class="rsub">Ventas totales</div></div>
+            <div class="rtile"><div class="rval" id="r-promo">0</div><div class="rsub">A precio promo</div></div>
+          </div>
+          <div class="rsep">Por formato vendido</div>
+          <div class="rgrid">
+            <div class="rtile"><div class="rval" id="r-medio">0</div><div class="rsub">Frascos ½ kg</div></div>
+            <div class="rtile"><div class="rval" id="r-uno">0</div><div class="rsub">Frascos 1 kg</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Obsequios 🎁</span></div>
+        <div class="card-body">
+          <div class="rgrid">
+            <div class="rtile otile"><div class="rval" id="r-obs-n">0</div><div class="rsub">Total obsequios</div></div>
+            <div class="rtile otile"><div class="rval" id="r-obs-val">$0.00</div><div class="rsub">Valor equiv. aprox.</div></div>
+            <div class="rtile"><div class="rval" id="r-obs-medio">0</div><div class="rsub">Frascos ½ kg</div></div>
+            <div class="rtile"><div class="rval" id="r-obs-uno">0</div><div class="rsub">Frascos 1 kg</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Stock Actual</span></div>
+        <div class="card-body">
+          <div class="rgrid">
+            <div class="rtile"><div class="rval" id="rs-medio">0</div><div class="rsub">Frascos ½ kg</div></div>
+            <div class="rtile"><div class="rval" id="rs-uno">0</div><div class="rsub">Frascos 1 kg</div></div>
+          </div>
+          <div style="text-align:center;padding:10px 0 4px;font-size:13px;color:#999">
+            Valor aprox. en stock: <strong id="rs-val" style="color:var(--tierra)">$0.00</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /app -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Estado ────────────────────────────────────────────────────────────────────
+const PRECIOS = {
+  "0.5-normal":8,"0.5-promo":7.5,"0.5-obsequio":0,
+  "1-normal":15,"1-promo":14,"1-obsequio":0
+};
+
+let state = {
+  stock:  JSON.parse(localStorage.getItem("apiario-stock")  || '{"medio":0,"uno":0}'),
+  ventas: JSON.parse(localStorage.getItem("apiario-ventas") || '[]'),
+  filtro: "todas",
+  formCantidad: "1",
+  formPrecio:   "normal"
+};
+
+const save = () => {
+  localStorage.setItem("apiario-stock",  JSON.stringify(state.stock));
+  localStorage.setItem("apiario-ventas", JSON.stringify(state.ventas));
+};
+
+// ── Utilidades ────────────────────────────────────────────────────────────────
+const fmt     = n => "$" + Number(n).toFixed(2);
+const fmtDate = iso => new Date(iso).toLocaleDateString("es-CL",{day:"2-digit",month:"short",year:"numeric"});
+const mesActual = () => { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`; };
+const $ = id => document.getElementById(id);
+const set = (id,v) => { const el=$(id); if(el) el.textContent=v; };
+
+let toastTimer;
+const showToast = msg => {
+  const t=$("toast"); t.textContent=msg; t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove("show"), 2400);
+};
+
+// ── Navegación ────────────────────────────────────────────────────────────────
+document.querySelectorAll(".nav-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".nav-btn").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll(".tab-pane").forEach(p=>p.classList.remove("active"));
+    btn.classList.add("active");
+    $("tab-"+btn.dataset.tab).classList.add("active");
+    renderAll();
+  });
+});
+
+// ── Stock ─────────────────────────────────────────────────────────────────────
+function adj(key, delta) {
+  state.stock[key] = Math.max(0, (state.stock[key]||0) + delta);
+  save(); renderAll();
+}
+
+// ── Formulario ────────────────────────────────────────────────────────────────
+function selCant(btn) {
+  document.querySelectorAll("#pills-cantidad .pill").forEach(p=>p.classList.remove("sel","opill"));
+  btn.classList.add("sel");
+  if(state.formPrecio==="obsequio") btn.classList.add("opill");
+  state.formCantidad = btn.dataset.val;
+  renderPreview();
+}
+function selPrecio(btn) {
+  document.querySelectorAll("#pills-precio .pill").forEach(p=>p.classList.remove("sel","opill"));
+  btn.classList.add("sel");
+  if(btn.dataset.val==="obsequio") btn.classList.add("opill");
+  state.formPrecio = btn.dataset.val;
+  // actualizar selección de cantidad
+  const cantBtn = document.querySelector(`#pills-cantidad .pill[data-val="${state.formCantidad}"]`);
+  document.querySelectorAll("#pills-cantidad .pill").forEach(p=>p.classList.remove("sel","opill"));
+  if(cantBtn){ cantBtn.classList.add("sel"); if(btn.dataset.val==="obsequio") cantBtn.classList.add("opill"); }
+  renderPreview();
+}
+
+function renderPreview() {
+  const esObs = state.formPrecio==="obsequio";
+  const prev  = $("f-preview");
+  const label = $("prev-label");
+  const val   = $("prev-val");
+  const cli   = $("f-cli-label");
+  const inp   = $("f-cliente");
+  const btnR  = $("btn-registrar");
+
+  prev.className  = "preview" + (esObs?" oprev":"");
+  label.textContent = esObs ? "Tipo de entrega" : "Total a cobrar";
+  val.className   = "prev-val" + (esObs?" oprev-val":"");
+  val.textContent = esObs ? "Obsequio 🎁" : fmt(PRECIOS[`${state.formCantidad}-${state.formPrecio}`]||0);
+  cli.textContent = esObs ? "Nombre del destinatario" : "Nombre o Código de Cliente";
+  inp.placeholder = esObs ? "Ej: María (hermana)" : "Ej: Juan Pérez o CLI-042";
+  btnR.className  = "btn" + (esObs?" obtn":"");
+  btnR.textContent= esObs ? "Registrar Obsequio 🎁" : "Registrar Venta";
+}
+
+function registrar() {
+  const fecha   = $("f-fecha").value;
+  const cliente = $("f-cliente").value.trim();
+  if(!cliente) return showToast("⚠️ Ingresa nombre o código de cliente");
+  const sk = state.formCantidad==="0.5"?"medio":"uno";
+  if(state.stock[sk]<=0) return showToast("⚠️ Sin stock para este formato");
+
+  const total = PRECIOS[`${state.formCantidad}-${state.formPrecio}`];
+  state.ventas.unshift({ id:Date.now(), fecha, cliente, cantidad:state.formCantidad, precio:state.formPrecio, total });
+  state.stock[sk]--;
+  save();
+  $("f-cliente").value="";
+  showToast(state.formPrecio==="obsequio" ? "🎁 Obsequio registrado" : "✅ Venta registrada");
+  renderAll();
+}
+
+// ── Filtros ───────────────────────────────────────────────────────────────────
+function setFiltro(btn) {
+  document.querySelectorAll(".chip").forEach(c=>c.classList.remove("act","ochip"));
+  btn.classList.add("act");
+  if(btn.dataset.f==="obsequio") btn.classList.add("ochip");
+  state.filtro = btn.dataset.f;
+  renderLista();
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function renderAll() {
+  const { stock, ventas } = state;
+  const pagadas   = ventas.filter(v=>v.precio!=="obsequio");
+  const obsequios = ventas.filter(v=>v.precio==="obsequio");
+  const mes       = mesActual();
+  const totalGen  = pagadas.reduce((a,v)=>a+v.total,0);
+  const totalMes  = pagadas.filter(v=>v.fecha.startsWith(mes)).reduce((a,v)=>a+v.total,0);
+  const ticket    = pagadas.length ? totalGen/pagadas.length : 0;
+  const obsVal    = obsequios.reduce((a,v)=>a+(v.cantidad==="0.5"?8:15),0);
+
+  // Header
+  set("h-mes",   fmt(totalMes));
+  set("h-total", fmt(totalGen));
+  set("h-obs",   obsequios.length+" frascos");
+
+  // Stock tab
+  const snMedio = $("snum-medio"); snMedio.textContent=stock.medio; snMedio.className="snum"+(stock.medio<3?" low":"");
+  const snUno   = $("snum-uno");   snUno.textContent  =stock.uno;   snUno.className  ="snum"+(stock.uno<3?  " low":"");
+  set("sval-total", fmt(stock.medio*8+stock.uno*15));
+  set("adj-medio",  stock.medio);
+  set("adj-uno",    stock.uno);
+  const alert = $("alert-stock");
+  alert.style.display = (stock.medio<3||stock.uno<3) ? "flex" : "none";
+
+  // Resumen
+  set("r-total",    fmt(totalGen));
+  set("r-mes",      fmt(totalMes));
+  set("r-ticket",   fmt(ticket));
+  set("r-nvtas",    pagadas.length);
+  set("r-promo",    pagadas.filter(v=>v.precio==="promo").length);
+  set("r-medio",    pagadas.filter(v=>v.cantidad==="0.5").length);
+  set("r-uno",      pagadas.filter(v=>v.cantidad==="1").length);
+  set("r-obs-n",    obsequios.length);
+  set("r-obs-val",  fmt(obsVal));
+  set("r-obs-medio",obsequios.filter(v=>v.cantidad==="0.5").length);
+  set("r-obs-uno",  obsequios.filter(v=>v.cantidad==="1").length);
+  set("rs-medio",   stock.medio);
+  set("rs-uno",     stock.uno);
+  set("rs-val",     fmt(stock.medio*8+stock.uno*15));
+
+  renderLista();
+  renderPreview();
+}
+
+function renderLista() {
+  const { ventas, filtro } = state;
+  const lista = filtro==="todas"    ? ventas
+    : filtro==="obsequio"           ? ventas.filter(v=>v.precio==="obsequio")
+    : filtro==="promo"              ? ventas.filter(v=>v.precio==="promo")
+    : ventas.filter(v=>v.cantidad===filtro);
+
+  const cont = $("lista-ventas");
+  if(!lista.length){
+    cont.innerHTML=`<div class="empty"><div class="empty-icon">📋</div><div>No hay registros aquí todavía</div></div>`;
+    return;
+  }
+  cont.innerHTML = lista.map(v=>{
+    const o=v.precio==="obsequio";
+    const icon = o?"🎁":v.cantidad==="0.5"?"🫙":"🍯";
+    const badge = o?"obs":v.precio==="promo"?"promo":"";
+    const badgeTxt = v.cantidad+" kg"+(o?" · Obsequio":v.precio==="promo"?" · Promo":"");
+    return `
+    <div class="vi">
+      <div class="vav ${o?"oav":""}">${icon}</div>
+      <div class="vinfo">
+        <div class="vcli">${v.cliente}</div>
+        <div class="vmeta">${fmtDate(v.fecha)}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+        <span class="vbadge ${badge}">${badgeTxt}</span>
+        <span class="vtotal ${o?"obs":""}">${o?"Gratis":fmt(v.total)}</span>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+window.addEventListener("DOMContentLoaded", () => {
+  $("f-fecha").value = new Date().toISOString().split("T")[0];
+  renderAll();
+});
+</script>
+</body>
+</html>
